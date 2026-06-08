@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitoreo Ilimitado - P65</title>
+    <title>Monitoreo Coordenadas - P65</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
     <style>
@@ -57,7 +57,7 @@
                 if (listaPuntosDestino.length === 1) {
                     var p = listaPuntosDestino[0];
                     var m = L.marker([p.lat, p.lng], { icon: iconoDestino }).addTo(map);
-                    m.bindPopup("<div class='popup-destino'>📍 " + p.info + "</div>").openPopup();
+                    m.bindPopup("<div class='popup-destino'>📍 Punto 1</div>").openPopup();
                     map.setView([p.lat, p.lng], 14);
                 }
                 return;
@@ -73,11 +73,9 @@
                 addWaypoints: false,
                 routeWhileDragging: false,
                 createMarker: function(i, waypoint, n) {
-                    var datosPunto = listaPuntosDestino[i];
                     var marcador = L.marker(waypoint.latLng, { icon: iconoDestino });
-                    if (datosPunto && datosPunto.info) {
-                        marcador.bindPopup("<div class='popup-destino'>📍 " + datosPunto.info + "</div>");
-                    }
+                    var numeroPunto = i + 1;
+                    marcador.bindPopup("<div class='popup-destino'>📍 Punto " + numeroPunto + "</div>");
                     return marcador;
                 }
             }).addTo(map);
@@ -133,20 +131,19 @@
                         if (datos.length >= 2) {
                             puntosParaElMapa.push({
                                 "lat": parseFloat(datos[0]),
-                                "lng": parseFloat(datos[1]),
-                                "info": datos[2] ? datos[2] : "Escala"
+                                "lng": parseFloat(datos[1])
                             });
                         }
                     });
                 } catch (e) {
-                    console.error("Error al procesar la URL optimizada:", e);
+                    console.error("Error al procesar la URL de coordenadas:", e);
                 }
             }
 
             if (puntosParaElMapa.length === 0) {
                 puntosParaElMapa = [
-                    {"lat": -12.6420, "lng": -76.6515, "info": "Muestra 1"},
-                    {"lat": -12.5188, "lng": -76.6712, "info": "Muestra 2"}
+                    {"lat": -12.6420, "lng": -76.6515},
+                    {"lat": -12.5188, "lng": -76.6712}
                 ];
             }
 
