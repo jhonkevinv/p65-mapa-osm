@@ -3,22 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitoreo de Rutas - P65</title>
-    
+    <title>Monitoreo Ilimitado - P65</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
-    
     <style>
-        body, html, #map { 
-            margin: 0; 
-            padding: 0; 
-            height: 100%; 
-            width: 100%; 
-            font-family: Arial, sans-serif;
-        }
+        body, html, #map { margin: 0; padding: 0; height: 100%; width: 100%; font-family: Arial, sans-serif; }
         .leaflet-routing-container { display: none !important; }
-        
         .popup-destino { font-weight: bold; color: #d32f2f; font-size: 13px; }
         .popup-usuario { font-weight: bold; color: #1976d2; font-size: 13px; }
     </style>
@@ -28,7 +18,6 @@
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
 
     <script>
@@ -44,32 +33,25 @@
 
         var iconoUsuario = L.icon({
             iconUrl: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png', 
-            iconSize: [40, 40],
-            iconAnchor: [20, 40],
-            popupAnchor: [0, -40]
+            iconSize: [40, 40], iconAnchor: [20, 40], popupAnchor: [0, -40]
         });
 
         var iconoDestino = L.icon({
             iconUrl: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',  
-            iconSize: [35, 35],
-            iconAnchor: [17, 35],
-            popupAnchor: [0, -35]
+            iconSize: [35, 35], iconAnchor: [17, 35], popupAnchor: [0, -35]
         });
 
         function inicializarPuntos(puntos) {
             listaPuntosDestino = puntos;
-            
             trazarRutaEstatica();
 
             if (navigator.geolocation) {
                 navigator.geolocation.watchPosition(actualizarSoloMarcadorGps, errorGps, {
-                    enableHighAccuracy: true,
-                    maximumAge: 0
+                    enableHighAccuracy: true, maximumAge: 0
                 });
-            } else {
-                console.error("La geolocalización no está soportada por este navegador.");
             }
         }
+
         function trazarRutaEstatica() {
             if (listaPuntosDestino.length < 2) {
                 if (listaPuntosDestino.length === 1) {
@@ -87,15 +69,12 @@
 
             controlRuta = L.Routing.control({
                 waypoints: waypointsProcesados,
-                lineOptions: {
-                    styles: [{ color: '#2b7ce9', weight: 6, opacity: 0.8 }]
-                },
+                lineOptions: { styles: [{ color: '#2b7ce9', weight: 6, opacity: 0.8 }] },
                 addWaypoints: false,
                 routeWhileDragging: false,
                 createMarker: function(i, waypoint, n) {
                     var datosPunto = listaPuntosDestino[i];
                     var marcador = L.marker(waypoint.latLng, { icon: iconoDestino });
-                    
                     if (datosPunto && datosPunto.info) {
                         marcador.bindPopup("<div class='popup-destino'>📍 " + datosPunto.info + "</div>");
                     }
@@ -119,7 +98,6 @@
             } else {
                 marcadorUsuario.setLatLng([lat, lng]);
             }
-
             comprobarLlegadaAPuntos(lat, lng);
         }
 
@@ -129,43 +107,46 @@
             var miUbicacion = L.latLng(miLat, miLng);
             var proximoDestino = listaPuntosDestino[0];
             var puntoObjetivo = L.latLng(proximoDestino.lat, proximoDestino.lng);
-            
             var distancia = miUbicacion.distanceTo(puntoObjetivo);
 
             if (distancia < 40) {
-                console.log("Punto alcanzado: " + proximoDestino.info);
-                listaPuntosDestino.shift();
-                
-                if (controlRuta !== null) { 
-                    map.removeControl(controlRuta); 
-                }
+                listaPuntosDestino.shift(); 
+                if (controlRuta !== null) { map.removeControl(controlRuta); }
                 trazarRutaEstatica();
             }
         }
 
-        function errorGps(err) { 
-            console.warn("Error leyendo el GPS: ", err.message); 
-        }
+        function errorGps(err) { console.warn("Error leyendo el GPS: ", err.message); }
 
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
-            const puntosParam = urlParams.get('puntos');
+            const datosCompactos = urlParams.get('p'); 
 
             let puntosParaElMapa = [];
 
-            if (puntosParam) {
+            if (datosCompactos) {
                 try {
-                    puntosParaElMapa = JSON.parse(decodeURIComponent(puntosParam));
+                    const bloques = decodeURIComponent(datosCompactos).split('|');
+                    
+                    bloques.forEach(function(bloque) {
+                        const datos = bloque.split(',');
+                        if (datos.length >= 2) {
+                            puntosParaElMapa.push({
+                                "lat": parseFloat(datos[0]),
+                                "lng": parseFloat(datos[1]),
+                                "info": datos[2] ? datos[2] : "Escala"
+                            });
+                        }
+                    });
                 } catch (e) {
-                    console.error("Error al procesar los puntos recibidos:", e);
+                    console.error("Error al procesar la URL optimizada:", e);
                 }
             }
 
             if (puntosParaElMapa.length === 0) {
                 puntosParaElMapa = [
-                    {"lat": -12.6420, "lng": -76.6515, "info": "Muestra 1: San Antonio"},
-                    {"lat": -12.5188, "lng": -76.6712, "info": "Muestra 2: Chilca"},
-                    {"lat": -12.0463, "lng": -77.0427, "info": "Muestra 3: Centro de Lima"}
+                    {"lat": -12.6420, "lng": -76.6515, "info": "Muestra 1"},
+                    {"lat": -12.5188, "lng": -76.6712, "info": "Muestra 2"}
                 ];
             }
 
