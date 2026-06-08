@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ruta con Marcadores Diferenciados</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    <style>
+        body, html, #map { margin: 0; padding: 0; height: 100%; width: 100%; }
+        .leaflet-routing-container { display: none !important; }
+        
+        /* Estilo opcional para resaltar el texto dentro de los Popups */
+        .popup-destino { font-weight: bold; color: #d32f2f; }
+        .popup-usuario { font-weight: bold; color: #1976d2; }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+
+    <script>
+        var map = L.map('map').setView([-12.0463, -77.0427], 10);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        var controlRuta = null;
+        var listaPuntosDestino = [];
+        var marcadorUsuario = null; 
+
+        // ==========================================
+        // 🎨 DEFINICIÓN DE ICONOS DIFERENCIADOS
+        // ==========================================
+        
+        // 1. Icono para TI (Tu ubicación en movimiento) -> Un auto azul
+        var iconoUsuario = L.icon({
+            iconUrl: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png', // Un punto azul brillante (puedes cambiarlo por la URL de un auto si prefieres)
+            iconSize: [40, 40],           // Tamaño del icono
+            iconAnchor: [20, 40],         // Punto del icono que pisará la coordenada exacta (la base)
+            popupAnchor: [0, -40]         // Dónde aparecerá el globito de texto respecto al icono
+        });
+
+        // 2. Icono para los PUNTOS DE ENTREGA/DESTINOS -> Pines Rojos
+        var iconoDestino = L.icon({
+            iconUrl: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',  // Pin rojo estándar
+            iconSize: [35, 35],
+            iconAnchor: [17, 35],
+            popupAnchor: [0, -35]
+        });
+
+
+        function inicializarPuntosDesdeFlutter(puntos) {
+            listaPuntosDestino = puntos;
+            trazarRutaEstatica();
+
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(actualizarSoloMarcadorGps, errorGps, {
+                    enableHighAccuracy: true,
+                    maximumAge: 0
+                });
+            }
+        }
+
+        // Dibuja la ruta usando los pines ROJOS
+        function trazarRutaEstatica() {
+            if (listaPuntosDestino.length < 2) return;
+
+            var waypointsProcesados = listaPuntosDestino.map(function(p) {
+                return L.latLng(p.lat, p.lng);
+            });
+
+            controlRuta = L.Routing.control({
+                waypoints: waypointsProcesados,
+                lineOptions: {
+                    styles: [{ color: '#2b7ce9', weight: 6, opacity: 0.8 }] // Línea azul de la ruta
+                },
+                addWaypoints: false,
+                routeWhileDragging: false,
+                createMarker: function(i, waypoint, n) {
+                    var datosPunto = listaPuntosDestino[i];
+                    
+                    // APLICAMOS EL ICONO ROJO A LOS DESTINOS
+                    var marcador = L.marker(waypoint.latLng, { icon: iconoDestino });
+                    
+                    if (datosPunto && datosPunto.info) {
+                        marcador.bindPopup("<div class='popup-destino'>📍 " + datosPunto.info + "</div>");
+                    }
+                    return marcador;
+                }
+            }).addTo(map);
+
+            controlRuta.on('routesfound', function(e) {
+                var bounds = waypointsProcesados.map(function(pt) { return [pt.lat, pt.lng]; });
+                map.fitBounds(bounds, { padding: [40, 40] });
+            });
+        }
+
+        // Mueve tu posición usando el ICONO AZUL
+        function actualizarSoloMarcadorGps(position) {
+            var lat = position.coords.latitude;
+            var lng = position.coords.longitude;
+
+            if (marcadorUsuario === null) {
+                // CREAMOS TU MARCADOR CON EL ICONO AZUL
+                marcadorUsuario = L.marker([lat, lng], { icon: iconoUsuario }).addTo(map);
+                marcadorUsuario.bindPopup("<div class='popup-usuario'>🚗 Mi Ubicación Actual</div>").openPopup();
+            } else {
+                marcadorUsuario.setLatLng([lat, lng]);
+            }
+
+            comprobarLlegadaAPuntos(lat, lng);
+        }
+
+        function comprobarLlegadaAPuntos(miLat, miLng) {
+            if (listaPuntosDestino.length === 0) return;
+
+            var miUbicacion = L.latLng(miLat, miLng);
+            var proximoDestino = listaPuntosDestino[0];
+            var puntoObjetivo = L.latLng(proximoDestino.lat, proximoDestino.lng);
+            
+            var distancia = miUbicacion.distanceTo(puntoObjetivo);
+
+            if (distancia < 40) {
+                listaPuntosDestino.shift(); 
+                if (controlRuta !== null) { map.removeControl(controlRuta); }
+                trazarRutaEstatica();
+            }
+        }
+
+        function errorGps(err) { console.error("Error leyendo el GPS: ", err.message); }
+
+        // DATA DE PRUEBA SIMULADA
+        var puntosDePrueba = [
+            {"lat": -12.6420, "lng": -76.6515, "info": "Parada 1: San Antonio"},
+            {"lat": -12.5188, "lng": -76.6712, "info": "Parada 2: Chilca"},
+            {"lat": -12.2530, "lng": -76.8842, "info": "Parada 3: Lurín"},
+            {"lat": -12.0463, "lng": -77.0427, "info": "Parada Final: Centro de Lima"}
+        ];
+
+        window.onload = function() {
+            inicializarPuntosDesdeFlutter(puntosDePrueba);
+        };
+    </script>
+</body>
+</html>
