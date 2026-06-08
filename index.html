@@ -11,9 +11,32 @@
         .leaflet-routing-container { display: none !important; }
         .popup-destino { font-weight: bold; color: #d32f2f; font-size: 13px; }
         .popup-usuario { font-weight: bold; color: #1976d2; font-size: 13px; }
+        
+        /* Botón flotante para centrar el mapa */
+        .btn-centrar {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background-color: #ffffff;
+            border: 2px solid rgba(0,0,0,0.2);
+            border-radius: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+            color: #333333;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn-centrar:hover { background-color: #f4f4f4; }
     </style>
 </head>
 <body>
+
+    <button class="btn-centrar" onclick="enfocarTodaLaRuta()">🔍 Centrar Ruta</button>
 
     <div id="map"></div>
 
@@ -81,9 +104,19 @@
             }).addTo(map);
 
             controlRuta.on('routesfound', function(e) {
-                var bounds = waypointsProcesados.map(function(pt) { return [pt.lat, pt.lng]; });
-                map.fitBounds(bounds, { padding: [50, 50] });
+                enfocarTodaLaRuta();
             });
+        }
+
+        // Nueva función global para centrar y encuadrar los puntos en pantalla
+        function enfocarTodaLaRuta() {
+            if (listaPuntosDestino.length === 0) return;
+            
+            var bounds = listaPuntosDestino.map(function(pt) { 
+                return [pt.lat, pt.lng]; 
+            });
+            
+            map.fitBounds(bounds, { padding: [50, 50] });
         }
 
         function actualizarSoloMarcadorGps(position) {
